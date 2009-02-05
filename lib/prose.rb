@@ -4,9 +4,7 @@ require 'cgi'
 #
 #     Prose - A lightweight text to html parser inspired by Markdown & Textile
 #
-
-class Prose < String
-    
+class Prose < String   
 #
 # Usage:
 #
@@ -66,33 +64,33 @@ class Prose < String
     # Glyph definitions
     #
     QuoteSingleOpen  =  '&lsquo;'
-	QuoteSingleClose =  '&rsquo;'
-	QuoteDoubleOpen  =  '&ldquo;'
-	QuoteDoubleClose =  '&rdquo;'
-	QuoteDoubleLow   =  '&bdquo;'
-	Apostrophe       =  '&#8217;'
-	Ellipsis         =  '&#8230;'
-	Emdash           =  '&mdash;'
-	Endash           =  '&ndash;'
-	Multiply         =  '&times;'
-	Divide           =  '&divide;'
-	Trademark        =  '&#8482;'
-	Registered       =  '&reg;'
-	Copyright        =  '&copy;'
-	Backslash        =  '&#92;'
-	
-	StartProse = "<!-- START PROSE -->\n"
-	EndProse   = "\n<!-- END PROSE -->"
-	
-	#
-	# *match* => <strong>replace</strong>
-	#
-	TAGS = {
+    QuoteSingleClose =  '&rsquo;'
+    QuoteDoubleOpen  =  '&ldquo;'
+    QuoteDoubleClose =  '&rdquo;'
+    QuoteDoubleLow   =  '&bdquo;'
+    Apostrophe       =  '&#8217;'
+    Ellipsis         =  '&#8230;'
+    Emdash           =  '&mdash;'
+    Endash           =  '&ndash;'
+    Multiply         =  '&times;'
+    Divide           =  '&divide;'
+    Trademark        =  '&#8482;'
+    Registered       =  '&reg;'
+    Copyright        =  '&copy;'
+    Backslash        =  '&#92;'
+    
+    StartProse = "<!-- START PROSE -->\n"
+    EndProse   = "\n<!-- END PROSE -->"
+    
+    #
+    # *match* => <strong>replace</strong>
+    #
+    TAGS = {
         '*' => 'strong',
-		'_' => 'em',
-		'"' => 'q',
-		'@' => 'code',
-		'-' => 'del'
+        '_' => 'em',
+        '"' => 'q',
+        '@' => 'code',
+        '-' => 'del'
     }
     
     #
@@ -100,30 +98,30 @@ class Prose < String
     #
     GLYPHS = {
         # Comments 
-		/[ \t]*[^:]\/\/.*(\n|\Z)/ => '\\1',
-		/\/\*.*?\*\//m => '',
-		
-		# Horizontal Rulers 
-		/\n\n[ \t]*[-=+]+(\n\n|\Z)/ => "\n\n<hr />\n\n",
-		
-		# em-dash and en-dash 
-		/( ?)--( ?)/ => '\\1' + Emdash + '\\2',
-		/\s-(?:\s|\Z)/  => ' ' + Endash + ' ',
-		
-		# ...        
-		/\b( )?\.{3}/ => '\\1' + Ellipsis,
-		
-		# Arithmetics: 2 x 3, 6 / 2 
-		/(\d+)( ?)x( ?)(?=\d+)/ => '\\1\\2' + Multiply + '\\3',
-		/(\d+)( ?)\/( ?)(?=\d+)/ => '\\1\\2' + Divide + '\\3',
-	
-		# (tm) (r) and (c) 
-		/\b ?[\(\[]tm[\]\)]/i => Trademark,
+        /[ \t]*[^:]\/\/.*(\n|\Z)/ => '\\1',
+        /\/\*.*?\*\//m => '',
+        
+        # Horizontal Rulers 
+        /\n\n[ \t]*[-=+]+(\n\n|\Z)/ => "\n\n<hr />\n\n",
+        
+        # em-dash and en-dash 
+        /( ?)--( ?)/ => '\\1' + Emdash + '\\2',
+        /\s-(?:\s|\Z)/  => ' ' + Endash + ' ',
+        
+        # ...        
+        /\b( )?\.{3}/ => '\\1' + Ellipsis,
+        
+        # Arithmetics: 2 x 3, 6 / 2 
+        /(\d+)( ?)x( ?)(?=\d+)/ => '\\1\\2' + Multiply + '\\3',
+        /(\d+)( ?)\/( ?)(?=\d+)/ => '\\1\\2' + Divide + '\\3',
+    
+        # (tm) (r) and (c) 
+        /\b ?[\(\[]tm[\]\)]/i => Trademark,
         /\b ?[\(\[]r[\]\)]/i  => Registered,
         /\b ?[\(\[]c[\]\)]/i  => Copyright,
-		
-		# Blockquotes 
-		/<< ?(.+) ?>>\n/m => "<blockquote>\\1</blockquote>\n\n",
+        
+        # Blockquotes 
+        /<< ?(.+) ?>>\n/m => "<blockquote>\\1</blockquote>\n\n",
     }
     # Defines the order of the parsing.
     # When a tuple is used, Prose checks
@@ -159,7 +157,7 @@ class Prose < String
         # We go through each parser, checking if it matches
         # the current mode, and run it.
         @lite = lite
-				
+                
         StartProse + PARSERS.inject( self ) do |text, parser|
             ( parser.is_a?(Array) && parser.last == @lite ) || 
               parser.is_a?(Symbol) ?  
@@ -173,11 +171,11 @@ class Prose < String
     #
     #   Remove extraneous white-space
     #
-	    text.strip.
-	         gsub("\r\n", "\n").           # Convert DOS to UNIX
-		     gsub(/\n{3,}/, "\n\n").       # 3+ to 2
-		     gsub(/\n[ \t]+\n/, "\n\n") +  # Empty lines
-		     "\n\n"                        # Add whitespace at the end
+        text.strip.
+             gsub("\r\n", "\n").           # Convert DOS to UNIX
+             gsub(/\n{3,}/, "\n\n").       # 3+ to 2
+             gsub(/\n[ \t]+\n/, "\n\n") +  # Empty lines
+             "\n\n"                        # Add whitespace at the end
     end
     
     def html text
@@ -194,35 +192,35 @@ class Prose < String
     #
     #   Parse *bold* _em_ -del- etc
     #
-	    TAGS.inject( text ) do |text, (style, tag)|
-			style = Regexp.escape( style )
-			text.gsub(/([^\w\\])             # Non-word or backslash
-			            #{style}             # Opening tag
-			            ([^\n\t#{style}]+?)  # Contents, which must not include the tag
-			            #{style}             # Closing tag
-			            ([^\w])              # Non-word character 
-			          /x, 
-			          "\\1<#{tag}>\\2</#{tag}>\\3")
-		end
-	end
-	
-	def glyphs text
-	#
+        TAGS.inject( text ) do |text, (style, tag)|
+            style = Regexp.escape( style )
+            text.gsub(/([^\w\\])             # Non-word or backslash
+                        #{style}             # Opening tag
+                        ([^\n\t#{style}]+?)  # Contents, which must not include the tag
+                        #{style}             # Closing tag
+                        ([^\w])              # Non-word character 
+                      /x, 
+                      "\\1<#{tag}>\\2</#{tag}>\\3")
+        end
+    end
+    
+    def glyphs text
+    #
     #   Replace some chars with better ones
     #
-	    GLYPHS.inject( text ) do |text, (match, replace)|
+        GLYPHS.inject( text ) do |text, (match, replace)|
             text.gsub( match, replace )
         end
-	end
+    end
     
     def headers text
-		text.
-		gsub(/^(.+)[ \t]*\n=+[ \t]*\n+/, "<h1>\\1</h1>\n\n").     # ======
-		gsub(/^(.+)[ \t]*\n-+[ \t]*\n+/, "<h2>\\1</h2>\n\n").     # ------
-	    gsub(/^(\#{1,6})[ \t]*(.+?)[ \t]*\#*\n+/) do |match|      # #
-		    lvl = ( $1.length + 2 ).to_s
-    		"<h#{ lvl }>" + $2 + "</h#{ lvl }>\n\n"
-		end
+        text.
+        gsub(/^(.+)[ \t]*\n=+[ \t]*\n+/, "<h1>\\1</h1>\n\n").     # ======
+        gsub(/^(.+)[ \t]*\n-+[ \t]*\n+/, "<h2>\\1</h2>\n\n").     # ------
+        gsub(/^(\#{1,6})[ \t]*(.+?)[ \t]*\#*\n+/) do |match|      # #
+            lvl = ( $1.length + 2 ).to_s
+            "<h#{ lvl }>" + $2 + "</h#{ lvl }>\n\n"
+        end
     end
     
     def lists text
@@ -244,19 +242,19 @@ class Prose < String
     
     def paragraphs text       
     #
-	#	Parse: \n\nfoo\n\n
-	#	Into: <p>foo</p>
+    #   Parse: \n\nfoo\n\n
+    #   Into: <p>foo</p>
     # 
     # # # Split text into blocks.
         # If it's not already enclosed in tags, or an hr,
-		# enclose it inside <p> tags
-		text.split("\n\n").collect do |block|		    	
-			if ! block.match(/^(<.+?>.+<.+?>)|(<hr \/>)$/m)
-				"\n<p>" + block + "</p>\n"
-			else
-				block
-			end
-		end.join
+        # enclose it inside <p> tags
+        text.split("\n\n").collect do |block|               
+            if ! block.match(/^(<.+?>.+<.+?>)|(<hr \/>)$/m)
+                "\n<p>" + block + "</p>\n"
+            else
+                block
+            end
+        end.join
     end
     
     # Line breaks
@@ -266,8 +264,8 @@ class Prose < String
     
     def links text
     #
-    #	Parse: "link":http://www.link.com
-    #	Into: <a href="http://www.link.com">link</a>
+    #   Parse: "link":http://www.link.com
+    #   Into: <a href="http://www.link.com">link</a>
     #    
         nofollow = "rel='nofollow'" if @lite
         
