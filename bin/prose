@@ -1,0 +1,80 @@
+#!/usr/bin/env ruby
+
+$:.unshift File.dirname(__FILE__) + "/../lib"
+
+require 'optparse'
+require 'prose'
+
+options = {
+  interactive: false,
+  format: 'html',
+  lite: false
+}
+
+opts = OptionParser.new do |o|
+  o.banner = "usage: prose [-ijl] source [destination]"
+  o.separator ""
+  o.separator "Parsing options:"
+  
+  # String mode
+  o.on("-i", "Interactive mode") do |e|
+    options[:interactive] = true
+  end
+  
+  # JSON
+  o.on("-j", "--json", "Output to json") do |j|
+    options[:format] = 'json'
+  end
+  
+  # Lite mode
+  o.on("-l", "--lite", "Lite mode") do |l|
+    options[:lite] = true
+  end
+  
+  o.separator ""
+  o.separator "Common options:"
+
+  o.on_tail("-h", "--help", "Show this message") do
+    puts opts
+    exit
+  end
+
+  # Another typical switch to print the version.
+  o.on_tail("-v", "--version", "Show version") do
+    puts "Prose " + Prose::VERSION
+    exit
+  end
+end
+
+opts.parse! # Parse options
+
+# Get source and destintation from command line
+case ARGV.size
+  when 1
+    options[:source] = ARGV[ 0 ]
+  when 2
+    options[:source] = ARGV[ 0 ]
+    options[:destination] = ARGV[ 1 ]
+  else
+    puts opts
+    exit
+end
+
+parser = Prose.new( options[:interactive] ? options[:source] : File.read( options[:source] ) )
+
+if options[:interactive]
+  puts parser.to_html.delete("\n")
+else
+  if options[:destination]
+    path = options[:destination]
+  else
+    path = parser.slug
+  end
+  
+  path += "." + options[:format] if path !~ /.(html|json)$/
+  path = Time.now.strftime("%Y-%m-%d") + '_' + path
+
+  File.open( path, "w" ) do |f|
+    f.write( parser.send("to_" + options[:format], options[:lite]) )
+  end
+end
