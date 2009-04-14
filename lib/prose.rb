@@ -1,4 +1,5 @@
 require 'cgi'
+require 'json'
 ##
 # Copyright (c) 2009 Alexis Sellier
 #
@@ -44,22 +45,24 @@ class Prose < String
 #
 #   *milk*   <strong>milk</strong>
 #   _milk_   <em>milk</em>
-#   @mlik@   <code>milk</code>
+#   %mlik%   <code>milk</code>
 #   -milk-   <del>milk</del>
 #   "milk"   <q>milk</q>
 #   
-#   hot--milk  &mdash
+#   hot--milk    &mdash
 #   hot - milk   &ndash
-#   (C),(R)    &copy, &reg
-#   2 x 2 / 5  &times, &divide
-#   ...      Ellipsis
+#   (C),(R)      &copy, &reg
+#   2 x 2 / 5    &times, &divide
+#   ...          Ellipsis
 #   
 #   // Secret  Comment, won't show up in html
 #   /* Secret */
+#   
+#   @author: Cloudhead
 #
 # # #
   #    
-  VERSION = '0.1'
+  VERSION = '0.2'
   #
   # Glyph definitions
   #
@@ -89,7 +92,7 @@ class Prose < String
     '*' => 'strong',
 		'_' => 'em',
 		'"' => 'q',
-		'@' => 'code',
+		'%' => 'code',
 		'-' => 'del'
   }
   
@@ -100,6 +103,9 @@ class Prose < String
     # Comments 
 		/[ \t]*[^:]\/\/.*(\n|\Z)/ => '\\1',
 		/\/\*.*?\*\//m => '',
+		
+		# Metadata
+		/^@.+?: *.+?\n/ => '',
 		
 		# Horizontal Rulers 
 		/\n\n[ \t]*[-=+]+(\n\n|\Z)/ => "\n\n<hr />\n\n",
@@ -121,7 +127,7 @@ class Prose < String
     /\b ?[\(\[]c[\]\)]/i  => Copyright,
 		
 		# Blockquotes 
-		/<< ?(.+) ?>>\n/m => "<blockquote>\\1</blockquote>\n\n",
+		/<< ?(.+) ?>>\n/m => "<blockquote>\\1</blockquote>\n",
   }
   # Defines the order of the parsing.
   # When a tuple is used, Prose checks
@@ -129,7 +135,7 @@ class Prose < String
   # before running it.
   PARSERS = [
     :whitespace, 
-    [:html, true], 
+    [:html, true],
     [:headers, false], 
     :links,
     :lists,
@@ -139,8 +145,11 @@ class Prose < String
     :backslashes
   ]
   
-  def initialize( string ) 
-    super( string ) 
+  def initialize string
+    @title = ''
+    @json = {}
+    
+    super 
   end
     
   def self.parse( text, lite = false )
@@ -158,24 +167,37 @@ class Prose < String
     # the current mode, and run it.
     @lite = lite
 				
-    StartProse + PARSERS.inject( self ) do |text, parser|
+    PARSERS.inject( self ) do |text, parser|
       ( parser.is_a?(Array) && parser.last == @lite ) || 
         parser.is_a?(Symbol) ?  
-          send( parser.is_a?(Array) ? parser.first : parser, text ) : text
-    end + EndProse
+        send( parser.is_a?(Array) ? parser.first : parser, text ) : text
+    end
+  end
+  alias parse to_html
+  
+  def to_json( lite = false )
+    self.scan(/^@(\w+?): *([\w\.\-\s]+?)$/) do |match|
+      @json[ match[ 0 ].to_s ] = match[ 1 ].to_s
+    end
+    @json[:title] = @title
+    @json[:body] = to_html( lite ).gsub("<h1>#@title</h1>", '') # Parse and remove title
+    @json[:date] = "#{ Time.now.strftime("%B") } #{ ordinal( Time.now.day ) } #{ Time.now.year }"
+    @json.to_json
   end
   
-  alias parse to_html
+  def slug
+    title.downcase.gsub(/[^a-z0-9]+/i, '-')
+  end
   
   def whitespace text
   #
   # Remove extraneous white-space
   #
 	  text.strip.
-	     gsub("\r\n", "\n").       # Convert DOS to UNIX
-		   gsub(/\n{3,}/, "\n\n").     # 3+ to 2
+	     gsub("\r\n", "\n").           # Convert DOS to UNIX
+		   gsub(/\n{3,}/, "\n\n").       # 3+ to 2
 		   gsub(/\n[ \t]+\n/, "\n\n") +  # Empty lines
-		   "\n\n"            # Add whitespace at the end
+		   "\n\n"                        # Add whitespace at the end
   end
   
   def html text
@@ -212,14 +234,22 @@ class Prose < String
       text.gsub( match, replace )
     end
 	end
+	
+	TITLE_REGEXP = /^(.+)[ \t]*\n=+[ \t]*\n+/
+  
+  def title
+    @title = self.scan( TITLE_REGEXP ).join
+  end
   
   def headers text
 		text.
-		gsub(/^(.+)[ \t]*\n=+[ \t]*\n+/, "<h1>\\1</h1>\n\n").   # ======
+		gsub( TITLE_REGEXP ) do |match|                         # ======
+	    "<h1>" + $1.to_s + "</h1>\n\n"
+    end.
 		gsub(/^(.+)[ \t]*\n-+[ \t]*\n+/, "<h2>\\1</h2>\n\n").   # ------
 	  gsub(/^(\#{1,6})[ \t]*(.+?)[ \t]*\#*\n+/) do |match|    # #
 		  lvl = ( $1.length + 2 ).to_s
-  		"<h#{ lvl }>" + $2 + "</h#{ lvl }>\n\n"
+  		"<h#{ lvl }>" + $2.to_s + "</h#{ lvl }>\n\n"
 		end
   end
   
@@ -273,5 +303,19 @@ class Prose < String
           "<a #{nofollow} href='\\2'>\\1</a>").
          gsub(/(^":)http:\/\/[^\s]+/,
           "<a #{nofollow} href='\\1'>\\1</a>")
+  end
+  
+  def ordinal number
+    number = number.to_i
+    case number % 100
+      when 11..13; "#{number}th"
+    else
+      case number % 10
+        when 1; "#{number}st"
+        when 2; "#{number}nd"
+        when 3; "#{number}rd"
+      else      "#{number}th"
+      end
+    end
   end
 end
