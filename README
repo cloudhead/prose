@@ -1,0 +1,71 @@
+Prose
+=====
+
+lightweight text to html/json parser
+
+ Usage:
+ -----
+
+   Prose.new(text).parse
+  or
+   Prose.parse text
+
+ lite mode (no headers, escape html):
+
+   text = Prose.new(text).parse(true)
+
+ You will also find a command line tool in /bin
+
+ Parser:
+ ------
+
+   Document Title <h1>
+   ==============
+
+   Header <h2>
+   ------
+
+   # Sub-Header      <h3>
+   ## Sub-sub-Header <h4>
+   ..etc.. 
+   
+   <ul>    <ol>
+   - Milk    1. Milk
+   - Apples  2. Apples
+   - Coffee  3. Coffee
+   
+   << Blockquote >>           <blockquote>
+
+   "Click Here":http://www.github.com <a>
+   Click:http://www.google.com        <a>
+   
+   +-+-+-+  <hr>, must have empty line before and after
+   +=+=+
+   ---
+
+   *milk*   <strong>milk</strong>
+   _milk_   <em>milk</em>
+   %mlik%   <code>milk</code>
+   -milk-   <del>milk</del>
+   "milk"   <q>milk</q>
+   
+   hot--milk    &mdash
+   hot - milk   &ndash
+   (C),(R)      &copy, &reg
+   2 x 2 / 5    &times, &divide
+   ...          Ellipsis
+   
+   // Secret    Comment, won't show up in html
+   /* Secret */
+ 
+ Metadata:
+ -------- 
+ When parsing to json, you might want to include additional metadata 
+ into the document. It's as simple as:
+  
+   @author: Cloudhead
+   @version: 1.0
+   @category: "misc"
+   ..etc..
+
+ Quotes ("") are optional
