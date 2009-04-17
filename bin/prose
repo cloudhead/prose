@@ -5,12 +5,14 @@ $:.unshift File.dirname(__FILE__) + "/../lib"
 require 'optparse'
 require 'prose'
 
+# Argument defaults
 options = {
   interactive: false,
   format: 'html',
   lite: false
 }
 
+# Get arguments
 opts = OptionParser.new do |o|
   o.banner = "usage: prose [-ijl] source [destination]"
   o.separator ""
@@ -46,32 +48,40 @@ opts = OptionParser.new do |o|
   end
 end
 
-opts.parse! # Parse options
+opts.parse! # Parse arguments into `options` hash
 
 # Get source and destintation from command line
+# Remove any extensions there might be on the destination
 case ARGV.size
   when 1
     options[:source] = ARGV[ 0 ]
   when 2
     options[:source] = ARGV[ 0 ]
-    options[:destination] = ARGV[ 1 ]
+    options[:destination] = ARGV[ 1 ].split('.').first
   else
     puts opts
     exit
 end
 
+# Create a new Prose object with either a string, or the contents of a file
 parser = Prose.new( options[:interactive] ? options[:source] : File.read( options[:source] ) )
 
+# If -i was used, remove line-feeds and output directly to stdout
 if options[:interactive]
   puts parser.to_html.delete("\n")
 else
   if options[:destination]
-    path = options[:destination]
+    begin 
+      path = parser.id = options[:destination] # Send the 
+    rescue
+      puts "prose: only a-z 0-9 and '-' are allowed as id"
+      exit
+    end
   else
-    path = parser.slug
+    path = parser.id
   end
   
-  path += "." + options[:format] if path !~ /.(html|json)$/
+  path += "." + options[:format]
   path = Time.now.strftime("%Y-%m-%d") + '_' + path
 
   File.open( path, "w" ) do |f|

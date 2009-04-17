@@ -60,7 +60,7 @@ class Prose < String
 #   
 #   @author: Cloudhead
 #
-# # #
+# #
   #    
   VERSION = '0.2'
   #
@@ -82,8 +82,8 @@ class Prose < String
 	Copyright        =  '&copy;'
 	Backslash        =  '&#92;'
 	
-	StartProse = "<!-- START PROSE -->\n"
-	EndProse   = "\n<!-- END PROSE -->"
+	StartProse = "<!-- prose -->\n"
+	EndProse   = "\n<!-- /prose -->"
 	
 	#
 	# *match* => <strong>replace</strong>
@@ -146,7 +146,8 @@ class Prose < String
   ]
   
   def initialize string
-    @title = ''
+    @title = nil
+    @id = nil
     @json = {}
     
     super 
@@ -158,13 +159,14 @@ class Prose < String
 
   def to_html( lite = false )
   #
-  #   Run all the parsing in order
+  #  Run all the parsing in order
   #
   # #
-    # The operations are done on +self+ as it is
-    # the string to be parsed.
-    # We go through each parser, checking if it matches
-    # the current mode, and run it.
+    #  The operations are done on +self+ as it is
+    #  the string to be parsed.
+    #  We go through each parser, checking if it matches
+    #  the current mode, and run, it if does.
+    #
     @lite = lite
 				
     PARSERS.inject( self ) do |text, parser|
@@ -176,17 +178,34 @@ class Prose < String
   alias parse to_html
   
   def to_json( lite = false )
-    self.scan(/^@(\w+?): *([\w\.\-\s]+?)$/) do |match|
-      @json[ match[ 0 ].to_s ] = match[ 1 ].to_s
+  #
+  #  JSON output
+  #
+  # #
+    #  We scan `self` for metadata in the form of:
+    #    @author: "cloudhead"
+    #  And add it as fields in the json document.
+    #
+    #  Additional data such as title, id and date are then
+    #  generated (or specified by the user), and added too. 
+    #  `self` is then parsed, and added to the `body` field.
+    #
+    self.to_s.scan(/^@(\w+?): *"?(.+?)"?$/) do |match|
+      @json[ match[ 0 ] ] = match[ 1 ]
     end
-    @json[:title] = @title
-    @json[:body] = to_html( lite ).gsub("<h1>#@title</h1>", '') # Parse and remove title
+    @json[:title] = title
+    @json[:id] = id
     @json[:date] = "#{ Time.now.strftime("%B") } #{ ordinal( Time.now.day ) } #{ Time.now.year }"
+    @json[:body] = to_html( lite ).gsub("<h1>#@title</h1>", '') # Parse, and remove title
     @json.to_json
   end
   
-  def slug
-    title.downcase.gsub(/[^a-z0-9]+/i, '-')
+  def id
+    @id || title.downcase.gsub(/[^a-z0-9]+/, '-')  # Return current id, or generate one from the `title`
+  end
+  
+  def id= s
+    s.scan(/[^a-z0-9\-]/).empty? ? @id = s : raise  # Raise an exception if non-standard characters were detected
   end
   
   def whitespace text
@@ -238,7 +257,7 @@ class Prose < String
 	TITLE_REGEXP = /^(.+)[ \t]*\n=+[ \t]*\n+/
   
   def title
-    @title = self.scan( TITLE_REGEXP ).join
+    @title ||= self.match( TITLE_REGEXP ).captures.join
   end
   
   def headers text
@@ -272,12 +291,12 @@ class Prose < String
   
   def paragraphs text     
   #
-	#	  Parse: \n\nfoo\n\n
-	#	  Into: <p>foo</p>
+	#	 Parse: \n\nfoo\n\n
+	#	 Into: <p>foo</p>
   # 
-  # # Split text into blocks.
-    # If it's not already enclosed in tags, or an hr,
-		# enclose it inside <p> tags
+  # #  Split text into blocks.
+    #  If it's not already enclosed in tags, or an hr,
+		#  enclose it inside <p> tags
 		text.split("\n\n").collect do |block|		  	
 			if ! block.match(/^(<.+?>.+<.+?>)|(<hr \/>)$/m)
 				"\n<p>" + block + "</p>\n"
@@ -306,6 +325,10 @@ class Prose < String
   end
   
   def ordinal number
+  # 1 => 1st
+  # 2 => 2nd
+  # 3 => 3rd
+  # ...
     number = number.to_i
     case number % 100
       when 11..13; "#{number}th"
