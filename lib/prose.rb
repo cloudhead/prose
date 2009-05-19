@@ -1,5 +1,6 @@
 require 'cgi'
 require 'json'
+require 'yaml'
 ##
 # Copyright (c) 2009 Alexis Sellier
 #
@@ -128,6 +129,7 @@ class Prose < String
 		
 		# Blockquotes 
 		/<< ?(.+) ?>>\n/m => "<blockquote>\\1</blockquote>\n",
+		/\n\n[\t ]+(.+?)\n\n/m => "<blockquote>\\1</blockquote>\n"
   }
   # Defines the order of the parsing.
   # When a tuple is used, Prose checks
@@ -148,7 +150,6 @@ class Prose < String
   def initialize string
     @title = nil
     @id = nil
-    @json = {}
     
     super 
   end
@@ -182,22 +183,40 @@ class Prose < String
   #  JSON output
   #
   # #
-    #  We scan `self` for metadata in the form of:
-    #    @author: "cloudhead"
-    #  And add it as fields in the json document.
-    #
     #  Additional data such as title, id and date are then
     #  generated (or specified by the user), and added too. 
     #  `self` is then parsed, and added to the `body` field.
-    #
-    self.to_s.scan(/^@(\w+?): *"?(.+?)"?$/) do |match|
-      @json[ match[ 0 ] ] = match[ 1 ]
+    #    
+    self.metadata.merge({
+      title:     title,
+      id:        Time.now.strftime("%Y-%m-%d") + '-' + id,
+      uri:       Time.now.strftime("/%Y/%m/%d/") + id,
+      timestamp: Time.now.to_i,
+      date:  "#{ Time.now.strftime("%B") } #{ ordinal( Time.now.day ) } #{ Time.now.year }",
+      body:      self.parse( lite ).gsub("<h1>#@title</h1>", ''), # Parse, and remove title 
+    }).to_json
+  end
+  
+  def to_yaml( lite = false )
+  #
+  # YAML output
+  #
+  self.metadata.merge({
+    title: title,
+    date:  Time.now.strftime("%Y/%m/%d"),
+    body:  self.parse( lite ).gsub("<h1>#@title</h1>", '')
+  }).to_yaml
+  end
+  
+  def metadata
+  #
+  #  Scan `self` for metadata in the form of:
+  #    @author: "cloudhead"
+  #  Return a hash containing all the key/value pairs
+  #
+    self.to_s.scan(/^@(\w+?): *"?(.+?)"?$/).inject({}) do |data, (key, value)|
+      data.merge key => value
     end
-    @json[:title] = title
-    @json[:id] = id
-    @json[:date] = "#{ Time.now.strftime("%B") } #{ ordinal( Time.now.day ) } #{ Time.now.year }"
-    @json[:body] = to_html( lite ).gsub("<h1>#@title</h1>", '') # Parse, and remove title
-    @json.to_json
   end
   
   def id
@@ -213,10 +232,10 @@ class Prose < String
   # Remove extraneous white-space
   #
 	  text.strip.
-	     gsub("\r\n", "\n").           # Convert DOS to UNIX
-		   gsub(/\n{3,}/, "\n\n").       # 3+ to 2
-		   gsub(/\n[ \t]+\n/, "\n\n") +  # Empty lines
-		   "\n\n"                        # Add whitespace at the end
+	       gsub("\r\n", "\n").           # Convert DOS to UNIX
+		     gsub(/\n{3,}/, "\n\n").       # 3+ to 2
+		     gsub(/\n[ \t]+\n/, "\n\n") +  # Empty lines
+		     "\n\n"                        # Add whitespace at the end
   end
   
   def html text
@@ -254,15 +273,15 @@ class Prose < String
     end
 	end
 	
-	TITLE_REGEXP = /^(.+)[ \t]*\n=+[ \t]*\n+/
+	TitleRegexp = /^(.+)[ \t]*\n=+[ \t]*\n+/
   
   def title
-    @title ||= self.match( TITLE_REGEXP ).captures.join
+    @title ||= self.match( TitleRegexp ).captures.join
   end
   
   def headers text
 		text.
-		gsub( TITLE_REGEXP ) do |match|                         # ======
+		gsub( TitleRegexp ) do |match|                          # ======
 	    "<h1>" + $1.to_s + "</h1>\n\n"
     end.
 		gsub(/^(.+)[ \t]*\n-+[ \t]*\n+/, "<h2>\\1</h2>\n\n").   # ------
