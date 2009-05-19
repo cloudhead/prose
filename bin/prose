@@ -28,6 +28,11 @@ opts = OptionParser.new do |o|
     options[:format] = 'json'
   end
   
+  # YAML
+  o.on("-y", "--yaml", "Output to yaml") do |y|
+    options[:format] = 'yaml'
+  end
+  
   # Lite mode
   o.on("-l", "--lite", "Lite mode") do |l|
     options[:lite] = true
@@ -36,12 +41,13 @@ opts = OptionParser.new do |o|
   o.separator ""
   o.separator "Common options:"
 
+  # Help
   o.on_tail("-h", "--help", "Show this message") do
     puts opts
     exit
   end
 
-  # Another typical switch to print the version.
+  # Version
   o.on_tail("-v", "--version", "Show version") do
     puts "Prose " + Prose::VERSION
     exit
@@ -70,20 +76,22 @@ parser = Prose.new( options[:interactive] ? options[:source] : File.read( option
 if options[:interactive]
   puts parser.to_html.delete("\n")
 else
-  if options[:destination]
+  path = if options[:destination]
     begin 
-      path = parser.id = options[:destination] # Send the 
+      parser.id = options[:destination] # Send the 
     rescue
       puts "prose: only a-z 0-9 and '-' are allowed as id"
       exit
     end
   else
-    path = parser.id
+    parser.id
   end
   
   path += "." + options[:format]
-  path = Time.now.strftime("%Y-%m-%d") + '_' + path
-
+  path = Time.now.strftime("%Y-%m-%d") + '-' + path
+  path = File.join( File.expand_path( File.dirname( options[:source] ) ), path )
+  
+  puts path
   File.open( path, "w" ) do |f|
     f.write( parser.send("to_" + options[:format], options[:lite]) )
   end
